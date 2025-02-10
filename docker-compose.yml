@@ -1,18 +1,20 @@
+version: '3.8'
+
 x-base_service: &base_service
-    ports:
-      - "${WEBUI_PORT:-7860}:7860"
-    volumes:
-      - &v1 ./data:/data
-      - &v2 ./output:/output
-    stop_signal: SIGKILL
-    tty: true
-    deploy:
-      resources:
-        reservations:
-          devices:
-              - driver: nvidia
-                device_ids: ['0']
-                capabilities: [compute, utility]
+  ports:
+    - "${WEBUI_PORT:-7860}:7860"
+  volumes:
+    - &v1 ./data:/data
+    - &v2 ./output:/output
+  stop_signal: SIGKILL
+  tty: true
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            device_ids: ['0']
+            capabilities: [compute, utility]
 
 name: webui-docker
 
@@ -22,6 +24,15 @@ services:
     profiles: ["download"]
     volumes:
       - *v1
+
+  setup:
+    image: alpine:latest
+    profiles: ["setup"]
+    volumes:
+      - *v1
+    command: ["sh", "-c", "docker compose --profile download up --build && docker compose --profile ${UI:-auto} up --build"]
+    depends_on:
+      - download
 
   auto: &automatic
     <<: *base_service
@@ -45,7 +56,6 @@ services:
     image: sd-comfy:7
     environment:
       - CLI_ARGS=
-
 
   comfy-cpu:
     <<: *comfy
